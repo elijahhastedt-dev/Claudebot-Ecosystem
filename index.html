@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claudebot Ecosystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hud">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><h1>CLAUDEBOT<br><small>ECOSYSTEM</small></h1></div>
+    <div class="stats">
+      <div class="stat"><label>TIME</label><span id="stat-clock">Day 1</span></div>
+      <div class="stat"><label>GOLD</label><span class="gold" id="stat-gold">0</span></div>
+      <div class="stat"><label>DONE</label><span id="stat-done">0</span></div>
+      <div class="stat"><label>ACTIVE / OPEN</label><span id="stat-active">0 / 0</span></div>
+      <span id="feed-status" class="feed off">DEMO ONLY</span>
+    </div>
+    <div class="controls">
+      <button id="btn-pause" class="px" aria-label="Pause" title="Pause (space)">❚❚</button>
+      <div class="seg" role="group" aria-label="Game speed">
+        <button class="px on" data-speed="1" title="1x (key 1)">1x</button>
+        <button class="px" data-speed="2" title="2x (key 2)">2x</button>
+        <button class="px" data-speed="4" title="4x (key 3)">4x</button>
+      </div>
+      <button id="btn-demo" class="px on" title="Auto-spawn demo quests">DEMO</button>
+      <button id="btn-bot" class="px">+ BOT</button>
+      <button id="btn-quest" class="px primary" title="Post a quest (Q)">+ QUEST</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="world-wrap"><canvas id="world" aria-label="The Claudebot village"></canvas></div>
+      <aside id="inspector" class="panel inspector" hidden></aside>
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>PARTY <span class="count" id="roster-count">0</span></h2>
+        <ul id="roster" class="roster"></ul>
+      </section>
+      <section class="panel">
+        <h2>QUEST BOARD</h2>
+        <ul id="quests" class="quests"></ul>
+      </section>
+      <section class="panel grow">
+        <h2>ADVENTURE LOG</h2>
+        <ul id="log" class="log"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="quest-dialog" class="panel">
+    <form id="quest-form">
+      <h2>POST A QUEST</h2>
+      <label>Title<input id="q-title" maxlength="80" placeholder="e.g. Fix the flaky login test" required></label>
+      <label>Station<select id="q-type"></select></label>
+      <label>Difficulty
+        <select id="q-diff">
+          <option value="1">★ Easy</option>
+          <option value="2">★★ Medium</option>
+          <option value="3">★★★ Hard</option>
+        </select>
+      </label>
+      <label>Assign to<select id="q-bot"></select></label>
+      <div class="actions"><button type="button" id="q-cancel" class="px">CANCEL</button><button class="px primary">POST</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="bot-dialog" class="panel">
+    <form id="bot-form">
+      <h2>RECRUIT A BOT</h2>
+      <label>Name<input id="b-name" maxlength="16" placeholder="e.g. Pixel" required></label>
+      <label>Color<input id="b-color" type="color" value="#d97757"></label>
+      <fieldset><legend>Skills</legend><div id="b-skills" class="checks"></div></fieldset>
+      <div class="actions"><button type="button" id="b-cancel" class="px">CANCEL</button><button class="px primary">RECRUIT</button></div>
+    </form>
+  </dialog>
+
+  <script src="src/config.js"></script>
+  <script src="src/engine.js"></script>
+  <script src="src/feed.js"></script>
+  <script src="src/ui.js"></script>
+  <script>
+    CBE.start(document.getElementById("world"));
+    CBE.ui.init();
+    if (CBE.startFeed) CBE.startFeed();
+    // Handy for the dev console: CBE.addQuest({ title: "Hello", type: "code" })
+  </script>
+</body>
+</html>
