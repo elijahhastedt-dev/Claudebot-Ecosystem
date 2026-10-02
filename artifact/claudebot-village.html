@@ -1,0 +1,1469 @@
+<title>Claudebot Village</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* One deliberate look: a Minecraft-style village at dusk-dirt, with stone GUI panels. */
+  :root {
+    color-scheme: dark;
+    --bg: #1d1510;
+    --gui: #c6c6c6;
+    --gui-hi: #ffffff;
+    --gui-lo: #555555;
+    --ink: #373737;
+    --ink-soft: #5e5e5e;
+    --slot: #8b8b8b;
+    --slot-lo: #373737;
+    --btn: #6f6f6f;
+    --btn-hi: #a9a9a9;
+    --btn-lo: #3a3a3a;
+    --white: #ffffff;
+    --shade: #3f3f3f;
+    --yellow: #ffff55;
+    --green: #55ff55;
+    --aqua: #55ffff;
+    --gray: #aaaaaa;
+    --red: #ff5555;
+    --gold: #ffaa00;
+    --emerald: #2e8a37;
+    --emerald-hi: #5cc865;
+    --emerald-lo: #17531d;
+    --tip: rgba(18, 4, 22, 0.95);
+    --tip-edge: #3b1a78;
+    --font: "Pixelify Sans", ui-monospace, "Courier New", monospace;
+    --logo: "Press Start 2P", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    background-size: 64px 64px;
+    image-rendering: pixelated;
+    color: var(--white);
+    font: 16px/1.3 var(--font);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  button { font: inherit; }
+  img { max-width: 100%; }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap;
+    padding-block: 10px; padding-inline: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    border-bottom: 2px solid #000;
+    box-shadow: 0 2px 0 rgba(255,255,255,0.08);
+  }
+  .logo { display: flex; flex-direction: column; gap: 6px; margin-right: 6px; }
+  .logo b {
+    font: 15px/1 var(--logo); color: #e2e2e2; letter-spacing: 1px;
+    text-shadow: 3px 3px 0 #2a2a2a;
+  }
+  .logo i {
+    font: 9px/1 var(--logo); font-style: normal; color: var(--yellow);
+    text-shadow: 2px 2px 0 #3f3f00; transform: rotate(-4deg); transform-origin: left; align-self: flex-start;
+    animation: splash 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes splash { to { transform: rotate(-4deg) scale(1.08); } }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .stat {
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+    padding: 5px 10px 5px 6px;
+    background: var(--slot);
+    box-shadow: inset 2px 2px 0 var(--slot-lo), inset -2px -2px 0 var(--gui-hi);
+    cursor: pointer; border: 0; color: var(--white);
+  }
+  .stat:hover { background: #9d9d9d; }
+  .stat img { width: 24px; height: 24px; image-rendering: pixelated; flex: none; }
+  .stat b { font-size: 22px; line-height: 1; text-shadow: 2px 2px 0 var(--shade); font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 13px; line-height: 1.05; color: #f0f0f0; text-shadow: 1px 1px 0 var(--shade); text-align: left; }
+  .clock { font-size: 18px; color: var(--yellow); text-shadow: 2px 2px 0 #3f3f00; white-space: nowrap; }
+  .hud-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ---------- Minecraft buttons ---------- */
+  .mc-btn {
+    color: var(--white); font-size: 15px; line-height: 1.1;
+    text-shadow: 2px 2px 0 var(--shade);
+    background: var(--btn);
+    border: 2px solid #000;
+    box-shadow: inset 2px 2px 0 var(--btn-hi), inset -2px -3px 0 var(--btn-lo);
+    padding: 6px 12px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mc-btn:hover { background: #818181; border-color: var(--white); }
+  .mc-btn:active { box-shadow: inset 2px 2px 0 var(--btn-lo), inset -2px -2px 0 var(--btn-hi); }
+  .mc-btn.green { background: var(--emerald); box-shadow: inset 2px 2px 0 var(--emerald-hi), inset -2px -3px 0 var(--emerald-lo); }
+  .mc-btn.green:hover { background: #38a042; }
+  .mc-btn.small { font-size: 13px; padding: 4px 8px 6px; }
+  .mc-btn.on { background: #5a5a8c; box-shadow: inset 2px 2px 0 #8c8cc8, inset -2px -3px 0 #34345a; }
+  .mc-btn:disabled { color: #a0a0a0; background: #4b4b4b; box-shadow: none; cursor: default; border-color: #000; }
+  .mc-btn:focus-visible, .stat:focus-visible, .row:focus-visible, canvas:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  a.mc-btn { text-decoration: none; display: inline-block; }
+
+  /* ---------- Layout ---------- */
+  .layout { flex: 1; min-height: 0; display: flex; gap: 14px; padding-block: 14px; padding-inline: 16px; }
+  .stage { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; }
+  .world-wrap { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #world {
+    display: block; border: 3px solid #000;
+    box-shadow: 0 0 0 3px #5a5a5a, 0 10px 30px rgba(0,0,0,0.6);
+    image-rendering: pixelated; cursor: default; touch-action: manipulation;
+  }
+  .side { width: 370px; flex: none; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; padding-right: 2px; }
+
+  /* GUI panel (inventory gray) */
+  .gui {
+    background: var(--gui); color: var(--ink);
+    border: 2px solid #000;
+    box-shadow: inset 3px 3px 0 var(--gui-hi), inset -3px -3px 0 var(--gui-lo);
+    padding: 12px 14px 14px;
+  }
+  .gui h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 8px; text-wrap: balance; }
+  .gui h2 img { width: 22px; height: 22px; image-rendering: pixelated; }
+  .gui .count { margin-left: auto; font-size: 15px; color: var(--ink-soft); font-weight: 500; }
+  .gui .sub { font-size: 14px; color: var(--ink-soft); margin: 2px 0 10px; }
+  .gui .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .link-btn { background: none; border: 0; padding: 0; color: #2a4fa8; text-decoration: underline; cursor: pointer; font-size: 14px; }
+
+  /* Tooltip-style cards (dark purple, like Minecraft item tooltips) */
+  .tip {
+    background: var(--tip); color: var(--white);
+    border: 2px solid #100010;
+    box-shadow: inset 0 0 0 2px var(--tip-edge);
+    padding: 9px 11px;
+  }
+  .list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .row { display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; width: 100%; font: inherit; }
+  .row:hover { box-shadow: inset 0 0 0 2px #7b55d6; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row .t { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .m { font-size: 13px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .pill { flex: none; font-size: 14px; color: var(--green); }
+  .row img.face { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+  .empty { font-size: 14px; color: var(--ink-soft); padding: 4px 2px; }
+  .empty b { color: var(--ink); font-weight: 600; }
+
+  .status-working { color: var(--green); }
+  .status-idle { color: var(--gray); }
+  .status-asleep { color: var(--aqua); }
+
+  .score { flex: none; width: 46px; text-align: center; }
+  .score b { display: block; font-size: 19px; color: var(--green); line-height: 1; text-shadow: 2px 2px 0 #153f15; }
+  .score i { display: block; height: 5px; margin-top: 4px; background: #1c1c1c; position: relative; }
+  .score i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); background: linear-gradient(#8cff5a, #3bbf2a); }
+  .score.mid b { color: var(--yellow); text-shadow: 2px 2px 0 #3f3f00; }
+  .score.low b { color: var(--gray); text-shadow: 2px 2px 0 #2a2a2a; }
+
+  .banner { font-size: 14px; padding: 8px 10px; margin-bottom: 8px; }
+
+  /* ---------- Dialogs ---------- */
+  dialog.gui { width: min(700px, calc(100vw - 32px)); max-height: min(86vh, 900px); padding: 0; overflow: hidden; }
+  dialog.gui[open] { display: flex; flex-direction: column; }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+  .dlg-head { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px 8px; }
+  .dlg-head h2 { font-size: 20px; }
+  .dlg-head .sub { margin: 4px 0 0; }
+  .dlg-head .x { margin-left: auto; }
+  .tabs { display: flex; gap: 6px; padding: 0 16px 10px; flex-wrap: wrap; }
+  .dlg-body { overflow-y: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .dlg-foot { padding: 10px 16px 14px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; border-top: 2px solid #9a9a9a; }
+
+  .card { display: flex; gap: 12px; align-items: flex-start; }
+  .card .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .card h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--yellow); text-wrap: balance; overflow-wrap: anywhere; }
+  .card .meta { font-size: 13px; color: var(--gray); }
+  .card p { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+  .card .hook { color: var(--white); }
+  .card .why { color: #d8c8ff; }
+  .card .caption { white-space: pre-wrap; color: #e8e8e8; max-height: 7.8em; overflow-y: auto; }
+  .card .tags { font-size: 14px; color: var(--aqua); overflow-wrap: anywhere; }
+  .card .sources { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; }
+  .card .sources a { color: var(--aqua); }
+  .card .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .thumb {
+    width: 64px; aspect-ratio: 9 / 16; flex: none; max-width: 100%;
+    background: #000 center / cover no-repeat;
+    box-shadow: inset 0 0 0 2px #555;
+    display: grid; place-items: center;
+  }
+  .thumb img { width: 26px; height: 26px; image-rendering: pixelated; }
+  .flash { outline: 3px solid var(--yellow); }
+
+  .form { display: flex; flex-direction: column; gap: 10px; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 15px; color: var(--ink); }
+  .form input, .form textarea {
+    font: 16px var(--font); color: var(--white); background: #000;
+    border: 2px solid #a0a0a0; padding: 6px 8px; width: 100%;
+  }
+  .form input:focus, .form textarea:focus { outline: none; border-color: var(--white); }
+  .form textarea { min-height: 80px; resize: vertical; }
+  .form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .help p { margin: 0 0 10px; color: var(--ink); font-size: 15px; max-width: 62ch; }
+  .help .tip p { color: var(--white); margin: 0; }
+  .help code { font-family: var(--font); color: var(--yellow); }
+
+  /* Advancement toasts */
+  .toasts { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 5; pointer-events: none; }
+  .toast {
+    display: flex; gap: 10px; align-items: center; width: 290px; max-width: calc(100vw - 52px);
+    background: #212121; border: 2px solid #000; box-shadow: inset 2px 2px 0 #5c5c5c, inset -2px -2px 0 #0f0f0f;
+    padding: 8px 10px; animation: toastIn 0.35s ease-out;
+  }
+  .toast img { width: 28px; height: 28px; image-rendering: pixelated; flex: none; }
+  .toast b { display: block; color: var(--yellow); font-weight: 500; font-size: 15px; }
+  .toast span { display: block; color: var(--white); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toast.out { opacity: 0; transform: translateX(30px); transition: 0.4s; }
+  @keyframes toastIn { from { transform: translateX(110%); } }
+
+  @media (max-width: 960px) {
+    body { overflow-y: auto; height: auto; }
+    .layout { flex-direction: column; }
+    .world-wrap { flex: none; width: 100%; aspect-ratio: 3 / 2; }
+    .side { width: 100%; overflow: visible; padding-right: 0; }
+    .logo b { font-size: 13px; }
+  }
+  @media (max-width: 520px) {
+    .hud { gap: 10px; }
+    .stats { order: 3; flex-basis: 100%; }
+    .stat { flex: 1 1 40%; }
+    .form .two { grid-template-columns: 1fr; }
+    .card { flex-direction: column; }
+    .thumb { width: 72px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo i, .toast { animation: none; }
+  }
+</style>
+
+<header class="hud">
+  <div class="logo"><b>CLAUDEBOT</b><i>VILLAGE</i></div>
+  <div class="stats">
+    <button class="stat" id="stat-ready" type="button" title="Open the Publishing Center"><img id="ico-ready" alt=""><b id="n-ready">0</b><span>ready to<br>publish</span></button>
+    <button class="stat" id="stat-ideas" type="button" title="Open the Research Library"><img id="ico-ideas" alt=""><b id="n-ideas">0</b><span>new<br>ideas</span></button>
+    <button class="stat" id="stat-pub" type="button" title="See published Shorts"><img id="ico-pub" alt=""><b id="n-pub">0</b><span>published</span></button>
+  </div>
+  <span class="clock" id="clock" title="The village follows your local time"></span>
+  <div class="hud-actions">
+    <button class="mc-btn green" id="btn-add" type="button">+ Add Short</button>
+    <button class="mc-btn" id="btn-help" type="button">How it works</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage" aria-label="Village map">
+    <div class="world-wrap"><canvas id="world" tabindex="0" aria-label="Claudebot Village map. Click a building or villager to open it."></canvas></div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+  </section>
+
+  <aside class="side">
+    <section class="gui">
+      <div class="head"><h2><img id="ico-ready-2" alt="">Ready to publish</h2><span class="count" id="ready-count"></span></div>
+      <div id="conn-banner" class="tip banner" hidden></div>
+      <ul class="list" id="ready-list"></ul>
+      <div style="margin-top:8px"><button class="link-btn" id="open-studio" type="button">Open the Publishing Center</button></div>
+    </section>
+    <section class="gui">
+      <div class="head"><h2><img id="ico-ideas-2" alt="">Viral ideas</h2><span class="count" id="ideas-count"></span></div>
+      <ul class="list" id="ideas-list"></ul>
+      <div style="margin-top:8px"><button class="link-btn" id="open-library" type="button">Open the Research Library</button></div>
+    </section>
+    <section class="gui">
+      <div class="head"><h2>Villagers</h2><span class="count" id="crew-count"></span></div>
+      <ul class="list" id="crew-list"></ul>
+    </section>
+  </aside>
+</main>
+
+<dialog class="gui" id="dlg" aria-labelledby="dlg-title">
+  <div class="dlg-head">
+    <div><h2 id="dlg-title"></h2><p class="sub" id="dlg-sub"></p></div>
+    <button class="mc-btn small x" type="button" id="dlg-close" aria-label="Close">X</button>
+  </div>
+  <div class="tabs" id="dlg-tabs"></div>
+  <div class="dlg-body" id="dlg-body"></div>
+  <div class="dlg-foot" id="dlg-foot" hidden></div>
+</dialog>
+
+<dialog class="gui" id="dlg-add" aria-labelledby="add-title">
+  <form class="form" id="add-form" style="padding:16px">
+    <h2 id="add-title">Add a Short to the Publishing Center</h2>
+    <label>Title<input id="f-title" maxlength="120" required placeholder="e.g. 3 AI tricks nobody talks about"></label>
+    <label>Video link<input id="f-url" type="url" placeholder="https://…  (Higgsfield, Drive, anywhere)"></label>
+    <label>Caption<textarea id="f-caption" maxlength="2200" placeholder="The description you'll paste into YouTube"></textarea></label>
+    <div class="two">
+      <label>Hashtags<input id="f-tags" maxlength="300" placeholder="#shorts #ai"></label>
+      <label>Length (seconds)<input id="f-dur" type="number" min="1" max="180" placeholder="45"></label>
+    </div>
+    <div class="dlg-foot" style="padding:10px 0 0">
+      <button class="mc-btn" type="button" id="add-cancel">Cancel</button>
+      <button class="mc-btn green" type="submit" id="add-save">Add to ready list</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  "use strict";
+
+  // =====================================================================
+  //  Your bots. Add new ones here later; each gets a workshop on an open plot.
+  // =====================================================================
+  const BOTS = [
+    { id: "higgs", name: "Higgs", role: "Higgsfield AI video maker", home: "studio", look: "director" },
+    { id: "sage", name: "Sage", role: "Full-time viral researcher", home: "library", look: "librarian" },
+  ];
+
+  const BS = 16, GW = 30, GH = 20, W = GW * BS, H = GH * BS;
+  const STREET_Y = 176;
+
+  // ---------------------------------------------------------------------
+  //  Small helpers
+  // ---------------------------------------------------------------------
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const safeUrl = (u) => (typeof u === "string" && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
+  const toMs = (v) => (typeof v === "number" ? v : typeof v === "string" ? Date.parse(v) || 0 : 0);
+  function ago(ms) {
+    if (!ms) return "";
+    const s = Math.max(0, (Date.now() - ms) / 1000);
+    if (s < 60) return "just now";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    if (s < 86400) return Math.floor(s / 3600) + "h ago";
+    return Math.floor(s / 86400) + "d ago";
+  }
+  const fmtDur = (sec) => {
+    const n = Number(sec);
+    if (!n || n < 0) return "";
+    return Math.floor(n / 60) + ":" + String(Math.round(n % 60)).padStart(2, "0");
+  };
+  function rng(seed) {
+    let s = seed >>> 0 || 1;
+    return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  }
+  const pick = (r, a) => a[Math.floor(r() * a.length)];
+
+  // ---------------------------------------------------------------------
+  //  Block textures (16x16, generated pixel by pixel)
+  // ---------------------------------------------------------------------
+  function tex(seed, fn) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 16;
+    const g = c.getContext("2d");
+    const r = rng(seed);
+    fn((x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); }, r, g);
+    return c;
+  }
+  const each = (fn) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) fn(x, y); };
+  function noiseTex(seed, cols, extra) {
+    return tex(seed, (p, r, g) => { each((x, y) => p(x, y, pick(r, cols))); if (extra) extra(p, r, g); });
+  }
+  function planks(seed, cols, seam) {
+    return tex(seed, (p, r) => each((x, y) => {
+      let c = pick(r, cols);
+      const row = y >> 2;
+      if (y % 4 === 3) c = seam;
+      else if (x === (row * 7 + 3) % 16) c = seam;
+      p(x, y, c);
+    }));
+  }
+  function tiles(seed, cols, seam, hi, gap) {
+    return tex(seed, (p, r) => each((x, y) => {
+      const row = y >> 2, off = (row % 2) * 4;
+      let c = pick(r, cols);
+      if (y % 4 === 3) c = seam;
+      else if ((x + off) % 8 === 0) c = gap;
+      else if (y % 4 === 0) c = hi;
+      p(x, y, c);
+    }));
+  }
+
+  const TX = {
+    grass: noiseTex(11, ["#5c9a39", "#66a642", "#5a9536", "#70b04b", "#4f8a31", "#62a03e"]),
+    path: noiseTex(12, ["#9c8150", "#a58a57", "#8f7547", "#b09461", "#97804f"], (p, r) => {
+      for (let i = 0; i < 12; i++) p(r() * 16 | 0, r() * 16 | 0, "#7a6239");
+    }),
+    coarse: noiseTex(13, ["#77553a", "#6b4c33", "#5f432c", "#80603f", "#5a5a5a"]),
+    dirt: noiseTex(14, ["#866043", "#7a573c", "#6c4c33", "#96704f", "#8a6a48"]),
+    leaves: noiseTex(15, ["#3d7f25", "#347020", "#468c2b", "#2d6419", "#3a7a23"], (p, r) => {
+      for (let i = 0; i < 26; i++) p(r() * 16 | 0, r() * 16 | 0, "#1f4a14");
+    }),
+    plaster: noiseTex(16, ["#ebe6da", "#e3ddd0", "#eeeae0", "#ddd6c8"]),
+    oak: planks(17, ["#b8945f", "#af8b56", "#a68350", "#bc9a65"], "#7b5f34"),
+    spruce: planks(18, ["#7a5935", "#72532f", "#6a4c2b"], "#4a341f"),
+    darkOak: planks(19, ["#4a3220", "#43301e", "#3e2a1a"], "#2a1c10"),
+    roofRed: tiles(20, ["#a24a32", "#ad553a", "#984330"], "#5e281a", "#c1694b", "#6e2f1f"),
+    roofSlate: tiles(21, ["#4d5563", "#56606e", "#47505c"], "#2a2f37", "#6a7483", "#353b45"),
+    roofBrown: tiles(22, ["#6e4a2b", "#795232", "#664427"], "#3b2513", "#8c6340", "#4a2f19"),
+    cobble: tex(23, (p, r) => {
+      const pts = Array.from({ length: 9 }, () => [r() * 16, r() * 16, pick(r, ["#7f7f7f", "#8f8f8f", "#747474", "#9a9a9a", "#868686"])]);
+      each((x, y) => {
+        let d1 = 1e9, d2 = 1e9, col = "#7f7f7f";
+        for (const [px, py, c] of pts) {
+          const dx = Math.min(Math.abs(x - px), 16 - Math.abs(x - px));
+          const dy = Math.min(Math.abs(y - py), 16 - Math.abs(y - py));
+          const d = Math.hypot(dx, dy);
+          if (d < d1) { d2 = d1; d1 = d; col = c; } else if (d < d2) d2 = d;
+        }
+        p(x, y, d2 - d1 < 1.25 ? "#555555" : (r() < 0.12 ? "#a3a3a3" : col));
+      });
+    }),
+    stoneBricks: tex(24, (p, r) => each((x, y) => {
+      const band = y < 8 ? 0 : 1, yy = y % 8;
+      let c = pick(r, ["#7d7d7d", "#858585", "#777777", "#8a8a8a"]);
+      if (yy === 7) c = "#575757";
+      else if (yy === 0) c = "#9c9c9c";
+      if ((band === 0 && x === 15) || (band === 1 && x === 7)) c = "#575757";
+      p(x, y, c);
+    })),
+    wheat: tex(25, (p, r) => {
+      each((x, y) => p(x, y, y % 4 === 3 ? "#3f2915" : pick(r, ["#5b3c22", "#523620", "#64432a"])));
+      for (let i = 0; i < 30; i++) {
+        const x = r() * 16 | 0, y = 1 + (r() * 15 | 0);
+        p(x, y, pick(r, ["#c8b44a", "#d9c15b", "#a8b43a"]));
+        p(x, y - 1, pick(r, ["#e2cd6a", "#b9a843"]));
+      }
+    }),
+    hay: tex(26, (p, r) => each((x, y) => {
+      let c = pick(r, ["#c9a43a", "#d4b045", "#bf9a33"]);
+      if (y === 3 || y === 12) c = "#7a5a22";
+      else if (x === 0 || x === 15) c = "#a8832a";
+      p(x, y, c);
+    })),
+    bookshelf: tex(27, (p, r) => {
+      each((x, y) => p(x, y, (y < 2 || y > 13 || y === 7 || y === 8) ? (y === 1 || y === 8 ? "#7b5f34" : pick(r, ["#b8945f", "#a68350"])) : "#2e2014"));
+      for (const top of [2, 9]) {
+        let x = 1;
+        while (x < 15) {
+          const w = r() < 0.5 ? 1 : 2, h = 4 + (r() < 0.5 ? 1 : 0);
+          const col = pick(r, ["#8a2f2f", "#2f4f8a", "#2f7340", "#8f7d32", "#64307a", "#4a4a4a", "#a0552d"]);
+          for (let i = 0; i < w && x + i < 15; i++) for (let j = 5 - h; j < 5; j++) p(x + i, top + j, col);
+          x += w;
+        }
+      }
+      for (let y = 0; y < 16; y++) { p(0, y, "#7b5f34"); p(15, y, "#7b5f34"); }
+    }),
+  };
+  const WATER = [0, 1, 2, 3].map((f) => tex(40 + f, (p, r) => each((x, y) => {
+    let c = pick(r, ["#3b6fd8", "#4279e0", "#3666cc", "#4a83e6"]);
+    if ((x + y * 2 + f * 4) % 16 < 2 && r() < 0.6) c = "#7aa6f2";
+    p(x, y, c);
+  })));
+
+  // Little item icons for the HUD (drawn as pixel maps)
+  function icon(map, pal) {
+    const c = document.createElement("canvas");
+    c.width = map[0].length; c.height = map.length;
+    const g = c.getContext("2d");
+    map.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
+    return c.toDataURL();
+  }
+  const ICONS = {
+    ready: icon([
+      "............",
+      ".kkkkkkkkkk.",
+      ".krrrrrrrrk.",
+      ".krrrwrrrrk.",
+      ".krrrwwrrrk.",
+      ".krrrwwwrrk.",
+      ".krrrwwrrrk.",
+      ".krrrwrrrrk.",
+      ".krrrrrrrrk.",
+      ".kddddddddk.",
+      ".kkkkkkkkkk.",
+      "............",
+    ], { k: "#1a1a1a", r: "#d23a32", w: "#ffffff", d: "#8f231d" }),
+    ideas: icon([
+      "............",
+      "..bbbbbbbb..",
+      ".bppppppppb.",
+      ".bpwwwwwwpb.",
+      ".bppppppppb.",
+      ".bpwwwwwppb.",
+      ".bppppppppb.",
+      ".bpwwwwwwpb.",
+      ".bppppppppb.",
+      ".bbbbbbbbbb.",
+      "..yyyyyyyy..",
+      "............",
+    ], { b: "#3b1f5c", p: "#7c4bc9", w: "#d9c8ff", y: "#e8d9a8" }),
+    pub: icon([
+      ".....gg.....",
+      "....gGGg....",
+      "...gGllGg...",
+      "..gGlwlGGg..",
+      ".gGGllGGGGd.",
+      ".gGGGGGGGGd.",
+      "..gGGGGGGd..",
+      "...gGGGGd...",
+      "....gGGd....",
+      ".....dd.....",
+      "............",
+      "............",
+    ], { g: "#0e6b2b", G: "#17dd62", l: "#8dfc9e", w: "#ffffff", d: "#0a4a1e" }),
+  };
+  for (const [id, key] of [["ico-ready", "ready"], ["ico-ready-2", "ready"], ["ico-ideas", "ideas"], ["ico-ideas-2", "ideas"], ["ico-pub", "pub"]]) $("#" + id).src = ICONS[key];
+  document.body.style.backgroundImage = `linear-gradient(rgba(15,10,6,.78), rgba(15,10,6,.78)), url(${TX.dirt.toDataURL()})`;
+
+  // ---------------------------------------------------------------------
+  //  The map
+  // ---------------------------------------------------------------------
+  const ground = Array.from({ length: GH }, () => Array(GW).fill("grass"));
+  const occupied = Array.from({ length: GH }, () => Array(GW).fill(false));
+  const fill = (key, x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (ground[j] && ground[j][i] !== undefined) ground[j][i] = key; };
+  const occ = (x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (occupied[j] && occupied[j][i] !== undefined) occupied[j][i] = true; };
+
+  fill("water", 28, 0, 2, GH);           // river
+  fill("cobble", 12, 6, 6, 8);           // plaza
+  fill("path", 2, 10, 28, 2);            // main street + bridge
+  fill("path", 7, 8, 1, 2);              // Publishing Center spur
+  fill("path", 22, 8, 1, 2);             // Library spur
+  fill("path", 6, 12, 1, 1);             // plot spurs
+  fill("path", 23, 12, 1, 1);
+  fill("wheat", 12, 1, 5, 4);            // farm
+  fill("water", 14, 1, 1, 4);
+  fill("cobble", 13, 6, 4, 4);           // well rim
+  fill("water", 14, 7, 2, 2);            // well water
+  fill("coarse", 4, 14, 5, 3);           // plot interiors
+  fill("coarse", 21, 14, 5, 3);
+  for (const [x, y, w, h] of [[28, 0, 2, 20], [12, 1, 6, 4], [12, 6, 6, 8], [2, 10, 28, 2], [3, 1, 8, 7], [19, 1, 8, 7], [3, 13, 7, 5], [20, 13, 7, 5], [13, 15, 4, 3], [7, 8, 3, 2], [20, 8, 5, 2]]) occ(x, y, w, h);
+
+  const waterTiles = [];
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (ground[y][x] === "water" && !(y >= 10 && y <= 11)) waterTiles.push([x, y]);
+
+  // Buildings you can click (block units)
+  const PLACES = {
+    studio: { name: "Publishing Center", x: 3, y: 1, w: 8, h: 7, bot: "higgs", tagY: 1 },
+    library: { name: "Research Library", x: 19, y: 1, w: 8, h: 7, bot: "sage", tagY: 1 },
+    plotW: { name: "Open plot", x: 3, y: 13, w: 7, h: 5, plot: true, tagY: 13 },
+    plotE: { name: "Open plot", x: 20, y: 13, w: 7, h: 5, plot: true, tagY: 13 },
+  };
+
+  // Light sources (block x, y, level) for blocky Minecraft-style night lighting
+  const LIGHTS = [
+    [11, 7, 14], [18, 7, 14], [11, 13, 14], [18, 13, 14],   // lamp posts
+    [7, 8, 12], [22, 8, 12],                                  // door lanterns
+    [4, 6, 8], [6, 6, 8], [8, 6, 8], [4, 7, 8], [5, 7, 8], [9, 7, 8],
+    [20, 6, 8], [22, 6, 8], [24, 6, 8], [25, 6, 8], [25, 7, 8],
+    [15, 17, 8], [24, 8, 9],
+  ];
+  const lightMap = Array.from({ length: GH }, (_, y) => Array.from({ length: GW }, (_, x) =>
+    LIGHTS.reduce((m, [lx, ly, lv]) => Math.max(m, lv - Math.abs(lx - x) - Math.abs(ly - y)), 0)));
+  const WINDOWS = [];
+
+  // ---------- static background ----------
+  const bg = document.createElement("canvas");
+  bg.width = W; bg.height = H;
+  function buildBackground() {
+    const g = bg.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    WINDOWS.length = 0;
+    const block = (key, x, y) => g.drawImage(key === "water" ? WATER[0] : TX[key], x * BS, y * BS);
+    const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) block(ground[y][x], x, y);
+
+    // river banks and bridge
+    rect("rgba(0,0,0,0.25)", 28 * BS, 0, 2, H);
+    for (let y = 10; y <= 11; y++) for (let x = 28; x <= 29; x++) block("oak", x, y);
+    for (let x = 28 * BS; x < 30 * BS; x += 8) { rect("#4a3220", x, 10 * BS - 1, 3, 4); rect("#4a3220", x, 12 * BS - 3, 3, 4); }
+    rect("#6b4a2b", 28 * BS, 10 * BS, 32, 2); rect("#6b4a2b", 28 * BS, 12 * BS - 2, 32, 2);
+
+    // flowers on open grass
+    const r = rng(77);
+    for (let i = 0; i < 70; i++) {
+      const x = r() * GW | 0, y = r() * GH | 0;
+      if (ground[y][x] !== "grass" || occupied[y][x]) continue;
+      const col = pick(r, ["#e23b3b", "#f2d33a", "#5a7ff0", "#f4f4f4", "#d86bd6"]);
+      const px = x * BS + 3 + (r() * 9 | 0), py = y * BS + 3 + (r() * 9 | 0);
+      rect("#2f6b1f", px + 1, py + 2, 1, 3);
+      rect(col, px, py, 3, 1); rect(col, px + 1, py - 1, 1, 3);
+      rect("#f7e27a", px + 1, py, 1, 1);
+    }
+    // tall grass tufts
+    for (let i = 0; i < 60; i++) {
+      const x = r() * GW | 0, y = r() * GH | 0;
+      if (ground[y][x] !== "grass" || occupied[y][x]) continue;
+      const px = x * BS + (r() * 13 | 0), py = y * BS + (r() * 12 | 0);
+      rect("#3f7f2a", px, py + 1, 1, 3); rect("#4f9a34", px + 2, py, 1, 4); rect("#3f7f2a", px + 1, py + 2, 1, 2);
+    }
+
+    // farm extras
+    block("hay", 17, 1); block("hay", 17, 3);
+    rect("#5a3d22", 17 * BS + 2, 2 * BS + 2, 12, 12); rect("#7b5f34", 17 * BS + 2, 2 * BS + 2, 12, 2); rect("#3d2a17", 17 * BS + 4, 2 * BS + 5, 8, 7);
+    rect("#2a6b1a", 17 * BS + 5, 2 * BS + 6, 6, 5);
+    for (let y = 1; y <= 4; y++) { rect("rgba(0,0,0,.2)", 12 * BS, y * BS + 15, 5 * BS, 1); }
+
+    // well posts + bell
+    for (const [x, y] of [[14, 7], [16, 7], [14, 9], [16, 9]]) { rect("rgba(0,0,0,.3)", x * BS - 1, y * BS - 1, 5, 5); rect("#6b5232", x * BS - 3, y * BS - 3, 5, 5); rect("#8a6c45", x * BS - 3, y * BS - 3, 5, 1); }
+    // bell on its frame
+    const bx = 12 * BS, by = 6 * BS;
+    rect("#3d2a17", bx + 1, by + 2, 3, 12); rect("#3d2a17", bx + 12, by + 2, 3, 12);
+    rect("#5a3d22", bx + 1, by + 3, 14, 2);
+    rect("#8a6a1a", bx + 5, by + 5, 6, 7); rect("#e3b83a", bx + 6, by + 5, 4, 6); rect("#fff3a0", bx + 6, by + 6, 1, 3);
+
+    // ---------- Publishing Center (Higgs's studio) ----------
+    house(g, { x: 3, y: 1, w: 8, roofRows: 5, roof: "roofRed" });
+    // chimney
+    block("cobble", 9, 2); rect("#1d1d1d", 9 * BS + 5, 2 * BS + 5, 6, 6); rect("rgba(0,0,0,.3)", 10 * BS, 2 * BS + 3, 3, 14);
+    // facade: two storeys of half-timbering
+    for (let x = 3; x <= 10; x++) { block("plaster", x, 6); block("plaster", x, 7); }
+    const beam = "#3d2a17";
+    rect(beam, 3 * BS, 6 * BS, 8 * BS, 3);                 // top beam
+    rect(beam, 3 * BS, 7 * BS - 2, 8 * BS, 3);             // floor beam
+    rect(beam, 3 * BS, 8 * BS - 2, 8 * BS, 2);             // sill
+    rect(beam, 3 * BS, 6 * BS, 3, 32); rect(beam, 11 * BS - 3, 6 * BS, 3, 32);
+    for (const x of [5, 7, 9]) {   // X braces on the upper floor
+      for (let i = 0; i < 12; i++) { rect(beam, x * BS + 2 + i, 6 * BS + 3 + i, 2, 1); rect(beam, x * BS + 13 - i, 6 * BS + 3 + i, 2, 1); }
+    }
+    for (const x of [4, 6, 8]) windowAt(g, x * BS + 2, 6 * BS + 4, 12, 9, true);
+    for (const x of [4, 5, 9]) windowAt(g, x * BS + 2, 7 * BS + 3, 12, 10, false);
+    door(g, 7 * BS + 3, 7 * BS + 2, "#9c7a48", "#6b5232");
+    banner(g, 6 * BS + 4, 7 * BS + 1);
+    banner(g, 8 * BS + 4, 7 * BS + 1);
+    // editing table: the place Higgs cuts his Shorts
+    rect("rgba(0,0,0,.3)", 9 * BS + 2, 8 * BS + 3, 14, 14);
+    block("oak", 9, 8); rect("#5a3d22", 9 * BS, 8 * BS, 16, 2);
+    rect("#1a1a1a", 9 * BS + 2, 8 * BS + 4, 12, 5); for (let i = 0; i < 6; i++) rect("#ddd", 9 * BS + 3 + i * 2, 8 * BS + 5, 1, 1);
+    rect("#c8c8c8", 9 * BS + 3, 8 * BS + 10, 8, 4); rect("#d23a32", 9 * BS + 12, 8 * BS + 10, 2, 4);
+
+    // ---------- Research Library (Sage's study) ----------
+    house(g, { x: 19, y: 1, w: 8, roofRows: 5, roof: "roofSlate" });
+    for (let x = 19; x <= 26; x++) { block("stoneBricks", x, 6); block("stoneBricks", x, 7); }
+    rect("#5f5f5f", 19 * BS, 6 * BS, 3, 32); rect("#5f5f5f", 27 * BS - 3, 6 * BS, 3, 32);
+    rect("#9a9a9a", 19 * BS, 6 * BS, 8 * BS, 2);
+    for (const x of [20, 22, 24, 25]) windowAt(g, x * BS + 3, 6 * BS + 3, 10, 12, false, true);
+    for (const x of [20, 21, 23, 24]) block("bookshelf", x, 7);
+    windowAt(g, 25 * BS + 3, 7 * BS + 2, 10, 12, false, true);
+    door(g, 22 * BS + 3, 7 * BS + 1, "#4a3220", "#2a1c10");
+    // lectern + enchanting table
+    rect("rgba(0,0,0,.3)", 20 * BS + 4, 8 * BS + 5, 12, 10);
+    rect("#7b5f34", 20 * BS + 2, 8 * BS + 3, 12, 10); rect("#b8945f", 20 * BS + 3, 8 * BS + 3, 10, 6);
+    rect("#f2ecd8", 20 * BS + 4, 8 * BS + 4, 4, 4); rect("#e6dcc0", 20 * BS + 8, 8 * BS + 4, 4, 4); rect("#5a3d22", 20 * BS + 8, 8 * BS + 4, 1, 4);
+    rect("rgba(0,0,0,.3)", 24 * BS + 3, 8 * BS + 3, 14, 14);
+    rect("#1b1026", 24 * BS + 1, 8 * BS + 1, 14, 14); rect("#9b2335", 24 * BS + 3, 8 * BS + 3, 10, 10);
+    for (const [dx, dy] of [[3, 3], [12, 3], [3, 12], [12, 12]]) rect("#5fe0d8", 24 * BS + dx, 8 * BS + dy, 1, 1);
+
+    // ---------- Cottage ----------
+    house(g, { x: 13, y: 15, w: 4, roofRows: 2, roof: "roofBrown" });
+    for (let x = 13; x <= 16; x++) block("plaster", x, 17);
+    rect(beam, 13 * BS, 17 * BS, 4 * BS, 2); rect(beam, 13 * BS, 18 * BS - 2, 4 * BS, 2);
+    rect(beam, 13 * BS, 17 * BS, 2, 16); rect(beam, 17 * BS - 2, 17 * BS, 2, 16);
+    windowAt(g, 13 * BS + 4, 17 * BS + 4, 9, 8, true);
+    windowAt(g, 15 * BS + 4, 17 * BS + 4, 9, 8, true);
+    door(g, 14 * BS + 4, 17 * BS + 2, "#7a5935", "#4a341f");
+
+    // ---------- Open plots for future bots ----------
+    for (const p of [PLACES.plotW, PLACES.plotE]) plot(g, p);
+
+    // ---------- lamp posts ----------
+    for (const [x, y] of [[11, 7], [18, 7], [11, 13], [18, 13]]) {
+      const px = x * BS + 5, py = y * BS + 5;
+      rect("rgba(0,0,0,.3)", px + 2, py + 3, 7, 7);
+      rect("#2c2c2c", px, py, 7, 7); rect("#ffcf6b", px + 1, py + 1, 5, 5); rect("#fff6cf", px + 2, py + 2, 3, 3);
+    }
+
+    // ---------- trees ----------
+    for (const [cx, cy] of [[1, 1], [1, 6], [0, 13], [1, 18], [9, 19], [11, 15], [18, 15], [17, 19], [25, 19]]) tree(g, cx, cy);
+
+    function house(g, b) {
+      const ridge = b.roofRows >= 3 ? b.y + Math.floor(b.roofRows / 2) : -1;
+      rect("rgba(0,0,0,.28)", (b.x + b.w) * BS, (b.y) * BS + 6, 5, (b.roofRows + 2) * BS - 6);
+      for (let ry = b.y; ry < b.y + b.roofRows; ry++) {
+        for (let rx = b.x; rx < b.x + b.w; rx++) {
+          block(b.roof, rx, ry);
+          const shadeDown = ridge < 0 ? ry > b.y : ry > ridge;
+          if (ry === ridge) { g.drawImage(TX.darkOak, 0, 0, 16, 6, rx * BS, ry * BS + 5, 16, 6); rect("rgba(255,255,255,.12)", rx * BS, ry * BS + 5, 16, 1); }
+          else if (shadeDown) rect("rgba(0,0,0,.2)", rx * BS, ry * BS, 16, 16);
+          else rect("rgba(255,255,255,.07)", rx * BS, ry * BS, 16, 16);
+        }
+      }
+      rect("rgba(0,0,0,.25)", b.x * BS, b.y * BS, 2, b.roofRows * BS);
+      rect("rgba(255,255,255,.1)", (b.x + b.w) * BS - 2, b.y * BS, 2, b.roofRows * BS);
+      rect("rgba(0,0,0,.45)", b.x * BS, (b.y + b.roofRows) * BS, b.w * BS, 3);
+    }
+    function windowAt(g, x, y, w, h, box, arch) {
+      rect("#3d2a17", x - 1, y - 1, w + 2, h + 2);
+      rect("#9fc9dc", x, y, w, h);
+      rect("#d9f0f7", x + 1, y + 1, 2, 2);
+      rect("#3d2a17", x + (w >> 1), y, 1, h); rect("#3d2a17", x, y + (h >> 1), w, 1);
+      if (arch) { rect("#7d7d7d", x - 1, y - 1, 2, 2); rect("#7d7d7d", x + w - 1, y - 1, 2, 2); }
+      if (box) { rect("#5a3d22", x - 1, y + h, w + 2, 2); for (let i = 0; i < w; i += 3) rect(i % 2 ? "#e23b3b" : "#f2d33a", x + i, y + h - 1, 2, 1); }
+      WINDOWS.push([x, y, w, h]);
+    }
+    function door(g, x, y, col, dark) {
+      rect(dark, x - 1, y - 1, 12, 15);
+      rect(col, x, y, 10, 14);
+      rect(dark, x + 1, y + 7, 8, 1); rect(dark, x + 4, y, 1, 14);
+      rect("#9fc9dc", x + 1, y + 1, 3, 4); rect("#9fc9dc", x + 6, y + 1, 3, 4);
+      rect("#d4b045", x + 7, y + 8, 2, 2);
+    }
+    function banner(g, x, y) {
+      rect("#3d2a17", x - 1, y - 1, 10, 2);
+      rect("#b02e26", x, y, 8, 13); rect("#8a221c", x, y + 12, 8, 1);
+      rect("#ffffff", x + 3, y + 3, 1, 7); rect("#ffffff", x + 4, y + 4, 1, 5); rect("#ffffff", x + 5, y + 5, 1, 3); rect("#ffffff", x + 6, y + 6, 1, 1);
+    }
+    function plot(g, p) {
+      const gapX = p.x + 3;
+      const post = (x, y) => { rect("#5a3d22", x * BS + 6, y * BS + 6, 4, 4); rect("#9c7a48", x * BS + 6, y * BS + 6, 4, 1); };
+      const railH = (x, y) => rect("#9c7a48", x * BS + 8, y * BS + 7, 16, 2);
+      const railV = (x, y) => rect("#9c7a48", x * BS + 7, y * BS + 8, 2, 16);
+      const x0 = p.x, x1 = p.x + p.w - 1, y0 = p.y, y1 = p.y + p.h - 1;
+      for (let x = x0; x < x1; x++) { if (x !== gapX - 1 && x !== gapX) railH(x, y0); railH(x, y1); }
+      for (let y = y0; y < y1; y++) { railV(x0, y); railV(x1, y); }
+      for (let x = x0; x <= x1; x++) { if (x !== gapX) post(x, y0); post(x, y1); }
+      for (let y = y0; y <= y1; y++) { post(x0, y); post(x1, y); }
+      // sign, crafting table and a stack of planks: "build here"
+      const sx = (gapX + 1) * BS + 2, sy = (y0 + 1) * BS + 3;
+      rect("rgba(0,0,0,.3)", sx + 2, sy + 2, 12, 7);
+      rect("#7b5f34", sx, sy, 12, 7); rect("#b8945f", sx + 1, sy + 1, 10, 5);
+      rect("#3d2a17", sx + 2, sy + 2, 7, 1); rect("#3d2a17", sx + 2, sy + 4, 5, 1);
+      const cx = (x1 - 1) * BS, cy = (y1 - 1) * BS;
+      g.drawImage(TX.oak, cx, cy); rect("#5a3d22", cx, cy, 16, 2); rect("#3d2a17", cx + 3, cy + 4, 10, 1); rect("#3d2a17", cx + 3, cy + 8, 10, 1); rect("#3d2a17", cx + 7, cy + 3, 1, 10);
+      const kx = (x0 + 1) * BS + 2, ky = (y1 - 1) * BS + 3;
+      for (let i = 0; i < 3; i++) { rect("#7b5f34", kx, ky + i * 4, 12, 3); rect("#c4a06a", kx, ky + i * 4, 12, 1); }
+    }
+    function tree(g, cx, cy) {
+      const shape = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
+      g.fillStyle = "rgba(0,0,0,.28)";
+      for (const [dx, dy] of shape) g.fillRect((cx + dx) * BS + 5, (cy + dy) * BS + 6, 16, 16);
+      for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const x = (cx + dx) * BS + (dx < 0 ? 8 : 0), y = (cy + dy) * BS + (dy < 0 ? 8 : 0);
+        g.drawImage(TX.leaves, 0, 0, 8, 8, x, y, 8, 8);
+      }
+      for (const [dx, dy] of shape) g.drawImage(TX.leaves, (cx + dx) * BS, (cy + dy) * BS);
+      rect("rgba(255,255,255,.1)", (cx - 1) * BS, (cy - 1) * BS + 8, 24, 8);
+      rect("rgba(255,255,255,.08)", cx * BS, (cy - 1) * BS, 16, 16);
+      rect("rgba(0,0,0,.18)", cx * BS + 8, (cy + 1) * BS, 16, 16);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  //  Villagers
+  // ---------------------------------------------------------------------
+  const LOOKS = {
+    director: { robe: "#3a3f5e", robeDark: "#2a2e46", trim: "#9be15d", hat: (g, x, y) => { g.fillStyle = "#24242c"; g.fillRect(x - 5, y - 21, 10, 3); g.fillRect(x - 3, y - 23, 6, 2); g.fillStyle = "#9be15d"; g.fillRect(x + 2, y - 23, 1, 1); } },
+    librarian: { robe: "#e3dfd2", robeDark: "#c4bfae", trim: "#9c2b2b", hat: (g, x, y) => { g.fillStyle = "#6b4a2b"; g.fillRect(x - 5, y - 21, 10, 3); g.fillStyle = "#9c2b2b"; g.fillRect(x - 4, y - 23, 8, 2); g.fillStyle = "#e8e0c8"; g.fillRect(x - 3, y - 22, 6, 1); } },
+    plain: { robe: "#7a5a3a", robeDark: "#5c4229", trim: "#4a3220", hat: () => {} },
+  };
+  function drawVillager(g, x, y, look, o) {
+    x = Math.round(x); y = Math.round(y);
+    const L = LOOKS[look] || LOOKS.plain;
+    const skin = "#bd8b72", skinDark = "#a1705a", brow = "#4a3524";
+    const bob = o.bob || 0;
+    const top = y - bob;
+    const sway = o.sway || 0;
+    g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(x - 5, y - 1, 10, 3);
+    // robe
+    g.fillStyle = L.robe; g.fillRect(x - 4, top - 10, 8, 9);
+    g.fillStyle = L.robeDark; g.fillRect(x - 4 + sway, top - 2, 8, 2);
+    g.fillStyle = L.trim; g.fillRect(x - 4, top - 4, 8, 1);
+    // crossed arms
+    g.fillStyle = L.robeDark; g.fillRect(x - 5, top - 8, 10, 3);
+    g.fillStyle = skinDark; g.fillRect(x - 3, top - 8, 6, 2);
+    // head
+    g.fillStyle = skin; g.fillRect(x - 4, top - 19, 8, 9);
+    g.fillStyle = "#c99a80"; g.fillRect(x - 4, top - 19, 8, 1);
+    if (!o.away) {
+      const f = o.facing || 0;
+      g.fillStyle = brow; g.fillRect(x - 3 + f, top - 16, 6, 1);
+      if (!o.asleep) {
+        g.fillStyle = "#ffffff"; g.fillRect(x - 3 + f, top - 15, 1, 1); g.fillRect(x + 2 + f, top - 15, 1, 1);
+        g.fillStyle = "#1f7a34"; g.fillRect(x - 2 + f, top - 15, 1, 1); g.fillRect(x + 1 + f, top - 15, 1, 1);
+      } else {
+        g.fillStyle = brow; g.fillRect(x - 3 + f, top - 14, 2, 1); g.fillRect(x + 1 + f, top - 14, 2, 1);
+      }
+      g.fillStyle = skinDark; g.fillRect(x - 1 + f, top - 15, 2, 5);
+      g.fillStyle = "#8d5e4a"; g.fillRect(x - 1 + f, top - 11, 2, 1);
+    } else {
+      g.fillStyle = skinDark; g.fillRect(x - 4, top - 12, 8, 2);
+    }
+    L.hat(g, x, top + 1);
+  }
+  function portrait(look) {
+    const c = document.createElement("canvas");
+    c.width = 16; c.height = 16;
+    const g = c.getContext("2d");
+    g.fillStyle = "#5c9a39"; g.fillRect(0, 0, 16, 16);
+    drawVillager(g, 8, 26, look, { facing: 0 });
+    return c.toDataURL();
+  }
+
+  // Points of interest, in texels. `ax` is where the spot meets the main street.
+  const POI = {
+    studioWork: { x: 136, y: 144, ax: 120, via: [{ x: 120, y: 142 }] },
+    studioDoor: { x: 120, y: 136, ax: 120, via: [] },
+    libraryWork: { x: 342, y: 142, ax: 360, via: [{ x: 360, y: 142 }] },
+    libraryDoor: { x: 360, y: 136, ax: 360, via: [] },
+    well: { x: 240, y: 168, ax: 240, via: [] },
+    bell: { x: 200, y: 126, ax: 200, via: [] },
+    plotW: { x: 104, y: 214, ax: 104, via: [] },
+    plotE: { x: 376, y: 214, ax: 376, via: [] },
+    bridge: { x: 456, y: 174, ax: 456, via: [] },
+    plaza: { x: 226, y: 196, ax: 226, via: [] },
+  };
+  const ROUTINE = {
+    higgs: [["studioWork", 5], ["well", 2], ["bell", 1], ["plaza", 2], ["plotW", 1], ["bridge", 1]],
+    sage: [["libraryWork", 6], ["well", 2], ["plaza", 1], ["plotE", 1], ["bridge", 1]],
+  };
+
+  const villagers = BOTS.map((b, i) => {
+    const start = POI[b.home === "studio" ? "studioWork" : "libraryWork"];
+    return { ...b, x: start.x, y: start.y, poi: b.home === "studio" ? "studioWork" : "libraryWork", path: [], linger: rand(1, 4), walkT: 0, facing: 0, away: false, mode: "idle", portrait: portrait(b.look), hop: 0, seed: i * 1.7 };
+  });
+
+  function weightedPick(list) {
+    const total = list.reduce((s, [, w]) => s + w, 0);
+    let r = Math.random() * total;
+    for (const [k, w] of list) { if ((r -= w) <= 0) return k; }
+    return list[0][0];
+  }
+  function routeTo(v, key) {
+    const from = POI[v.poi], to = POI[key];
+    const pts = [];
+    if (from) {
+      [...from.via].reverse().forEach((p) => pts.push(p));
+      pts.push({ x: from.ax, y: STREET_Y });
+    } else pts.push({ x: v.x, y: STREET_Y });
+    pts.push({ x: to.ax, y: STREET_Y });
+    to.via.forEach((p) => pts.push(p));
+    pts.push({ x: to.x + (key === "well" || key === "plaza" ? rand(-14, 14) : 0), y: to.y });
+    v.path = pts;
+    v.poi = key;
+  }
+
+  // ---------------------------------------------------------------------
+  //  Data from your bots (the artifact's database)
+  // ---------------------------------------------------------------------
+  const store = { shorts: [], ideas: [], bots: {}, conn: "connecting", canWrite: true, db: null };
+  const shortsBy = (status) => store.shorts.filter((s) => (s.status || "ready") === status);
+  function readyShorts() { return shortsBy("ready").sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt)); }
+  function publishedShorts() { return shortsBy("published").sort((a, b) => toMs(b.publishedAt) - toMs(a.publishedAt)); }
+  function ideasBy(status) {
+    return store.ideas.filter((i) => (i.status || "new") === status)
+      .sort((a, b) => status === "new" ? (Number(b.score) || 0) - (Number(a.score) || 0) : toMs(b.decidedAt || b.createdAt) - toMs(a.decidedAt || a.createdAt));
+  }
+  function botState(id) {
+    const d = store.bots[id];
+    const updated = d ? toMs(d.updatedAt) : 0;
+    const working = d && d.status === "working" && Date.now() - updated < 3 * 3600 * 1000;
+    return { working, task: working ? String(d.task || "Working") : "", updated };
+  }
+
+  // ---------------------------------------------------------------------
+  //  Simulation
+  // ---------------------------------------------------------------------
+  const particles = [];
+  function nightAmount() {
+    const d = new Date();
+    const h = d.getHours() + d.getMinutes() / 60;
+    if (h >= 20.5 || h < 5) return 1;
+    if (h >= 18.5) return (h - 18.5) / 2;
+    if (h < 7) return 1 - (h - 5) / 2;
+    return 0;
+  }
+
+  function updateVillager(v, dt, night) {
+    const st = botState(v.id);
+    const workKey = v.home === "studio" ? "studioWork" : "libraryWork";
+    const doorKey = v.home === "studio" ? "studioDoor" : "libraryDoor";
+    v.mode = st.working ? "working" : night > 0.6 ? "asleep" : "idle";
+    v.walkT += dt;
+    if (v.hop > 0) v.hop = Math.max(0, v.hop - dt);
+
+    if (v.path.length) {
+      const t = v.path[0];
+      const dx = t.x - v.x, dy = t.y - v.y, d = Math.hypot(dx, dy);
+      const step = 24 * dt;
+      v.facing = Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0;
+      v.away = dy < -0.5 && Math.abs(dy) > Math.abs(dx);
+      if (d <= step) { v.x = t.x; v.y = t.y; v.path.shift(); } else { v.x += dx / d * step; v.y += dy / d * step; }
+      v.moving = true;
+      return;
+    }
+    v.moving = false; v.away = false; v.facing = 0;
+
+    const want = v.mode === "working" ? workKey : v.mode === "asleep" ? doorKey : null;
+    if (want && v.poi !== want) { routeTo(v, want); return; }
+    if (want) {
+      if (v.mode === "working") workFx(v, dt);
+      if (v.mode === "asleep" && Math.random() < dt * 0.6) particles.push({ kind: "z", x: v.x + 4, y: v.y - 24, vx: 4, vy: -8, life: 2, max: 2 });
+      return;
+    }
+    v.linger -= dt;
+    if (v.linger <= 0) {
+      let next = weightedPick(ROUTINE[v.id] || [["plaza", 1]]);
+      if (next === v.poi) next = "plaza";
+      routeTo(v, next);
+      v.linger = rand(5, 12);
+    }
+  }
+
+  const GLYPHS = [[1, 0, 1, 0, 1, 0, 1, 1, 1], [1, 1, 0, 0, 1, 0, 0, 1, 1], [0, 1, 0, 1, 1, 1, 0, 1, 0], [1, 0, 0, 1, 1, 0, 1, 0, 1], [1, 1, 1, 0, 0, 1, 1, 1, 0]];
+  function workFx(v, dt) {
+    v.fx = (v.fx || 0) + dt;
+    if (v.fx < 0.18) return;
+    v.fx = 0;
+    if (v.home === "library") {
+      // enchanting-table glyphs drift from the bookshelves to Sage
+      const sx = rand(320, 408), sy = rand(112, 128);
+      particles.push({ kind: "glyph", g: GLYPHS[Math.random() * GLYPHS.length | 0], x: sx, y: sy, tx: v.x, ty: v.y - 14, life: 1.4, max: 1.4 });
+    } else {
+      particles.push({ kind: "spark", x: 152 + rand(-4, 4), y: 136 + rand(-2, 2), vx: rand(-12, 12), vy: rand(-26, -12), life: 0.8, max: 0.8, color: Math.random() < 0.5 ? "#9be15d" : "#ffffff" });
+    }
+  }
+  function happyBurst(x, y, n, color) {
+    for (let i = 0; i < n; i++) particles.push({ kind: "happy", x: x + rand(-10, 10), y: y + rand(-8, 4), vx: rand(-6, 6), vy: rand(-22, -10), life: rand(0.8, 1.4), max: 1.4, color: color || "#5fd35f" });
+  }
+
+  function updateParticles(dt) {
+    for (const p of particles) {
+      p.life -= dt;
+      if (p.kind === "glyph") { const k = 1 - p.life / p.max; p.cx = p.x + (p.tx - p.x) * k; p.cy = p.y + (p.ty - p.y) * k - Math.sin(k * Math.PI) * 10; }
+      else { p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; }
+    }
+    for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
+    // chimney smoke from the Publishing Center
+    smokeT += dt;
+    if (smokeT > 0.5) { smokeT = 0; particles.push({ kind: "smoke", x: 152 + rand(-2, 2), y: 38, vx: rand(2, 6), vy: -9, life: 3.5, max: 3.5 }); }
+  }
+  let smokeT = 0;
+
+  // ---------------------------------------------------------------------
+  //  Rendering
+  // ---------------------------------------------------------------------
+  const canvas = $("#world");
+  const ctx = canvas.getContext("2d");
+  const lo = document.createElement("canvas");
+  lo.width = W; lo.height = H;
+  const lg = lo.getContext("2d");
+  let scale = 2, dpr = 1;
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const maxW = wrap.clientWidth - 12, maxH = (wrap.clientHeight || 1e9) - 12;
+    dpr = window.devicePixelRatio || 1;
+    let k = Math.min(maxW / W, maxH / H);
+    const dev = k * dpr >= 2 ? Math.floor(k * dpr) : k * dpr;  // whole device pixels per texel when we can
+    k = dev / dpr;
+    scale = k;
+    canvas.style.width = Math.round(W * k) + "px";
+    canvas.style.height = Math.round(H * k) + "px";
+    canvas.width = Math.round(W * dev);
+    canvas.height = Math.round(H * dev);
+  }
+
+  function drawParticle(g, p) {
+    const a = clamp(p.life / p.max, 0, 1);
+    g.globalAlpha = p.kind === "smoke" ? a * 0.7 : a;
+    if (p.kind === "smoke") {
+      const s = Math.round(3 + (1 - a) * 4);
+      g.fillStyle = a > 0.5 ? "#8a8a8a" : "#6e6e6e";
+      g.fillRect(Math.round(p.x), Math.round(p.y), s, s);
+    } else if (p.kind === "glyph") {
+      g.fillStyle = "#e0d6ff";
+      p.g.forEach((on, i) => { if (on) g.fillRect(Math.round(p.cx) + (i % 3), Math.round(p.cy) + ((i / 3) | 0), 1, 1); });
+    } else if (p.kind === "happy") {
+      const x = Math.round(p.x), y = Math.round(p.y);
+      g.fillStyle = p.color; g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3);
+    } else if (p.kind === "spark") {
+      g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+    }
+    g.globalAlpha = 1;
+  }
+
+  function render(time) {
+    const night = nightAmount();
+    lg.imageSmoothingEnabled = false;
+    lg.drawImage(bg, 0, 0);
+    const wf = Math.floor(time * 3) % 4;
+    for (const [x, y] of waterTiles) lg.drawImage(WATER[wf], x * BS, y * BS);
+    // well posts sit over the water
+    for (const [x, y] of [[14, 7], [16, 7], [14, 9], [16, 9]]) { lg.fillStyle = "#6b5232"; lg.fillRect(x * BS - 3, y * BS - 3, 5, 5); lg.fillStyle = "#8a6c45"; lg.fillRect(x * BS - 3, y * BS - 3, 5, 1); }
+    // the book floating over the enchanting table
+    const bob = Math.round(Math.sin(time * 2) * 1.5);
+    lg.fillStyle = "#5a2e14"; lg.fillRect(24 * BS + 5, 8 * BS + 2 + bob, 6, 4);
+    lg.fillStyle = "#f2ecd8"; lg.fillRect(24 * BS + 6, 8 * BS + 2 + bob, 4, 3);
+
+    if (night > 0.05) {
+      lg.fillStyle = `rgba(255,190,90,${(night * 0.55).toFixed(3)})`;
+      for (const [x, y, w, h] of WINDOWS) lg.fillRect(x, y, w, h);
+    }
+
+    // particles behind villagers (smoke), villagers sorted by depth, then the rest
+    for (const p of particles) if (p.kind === "smoke") drawParticle(lg, p);
+    const vs = [...villagers].sort((a, b) => a.y - b.y);
+    for (const v of vs) {
+      const step = Math.floor(v.walkT * 6) % 2;
+      const hop = v.hop > 0 ? Math.round(Math.sin((1 - v.hop / 0.6) * Math.PI) * 4) : 0;
+      drawVillager(lg, v.x, v.y, v.look, {
+        facing: v.facing, away: v.away, asleep: v.mode === "asleep" && !v.moving,
+        bob: (v.moving ? step : v.mode === "working" ? Math.round(Math.abs(Math.sin(time * 5 + v.seed))) : 0) + hop,
+        sway: v.moving ? (step ? 1 : -1) : 0,
+      });
+    }
+
+    // Minecraft-style block lighting at night
+    if (night > 0.01) {
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        const a = night * 0.72 * (1 - lightMap[y][x] / 15);
+        if (a > 0.01) { lg.fillStyle = `rgba(10,12,38,${a.toFixed(3)})`; lg.fillRect(x * BS, y * BS, BS, BS); }
+      }
+    }
+    for (const p of particles) if (p.kind !== "smoke" && p.kind !== "z") drawParticle(lg, p);
+
+    // scale up with hard pixel edges
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(lo, 0, 0, canvas.width, canvas.height);
+    drawTags(time);
+  }
+
+  // Floating Minecraft name tags, drawn at screen resolution so text stays crisp
+  function drawTags(time) {
+    const k = canvas.width / W;
+    const fs = Math.round(clamp(k * 5.4, 12 * dpr, 18 * dpr));
+    ctx.font = `500 ${fs}px "Pixelify Sans", ui-monospace, monospace`;
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    const tag = (lines, cx, by) => {
+      const pad = Math.round(fs * 0.35), lh = Math.round(fs * 1.2);
+      const w = Math.max(...lines.map((l) => ctx.measureText(l.t).width)) + pad * 2;
+      const h = lines.length * lh + pad;
+      const x = clamp(Math.round(cx - w / 2), 2, canvas.width - w - 2);
+      const y = Math.max(2, Math.round(by - h));
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(x, y, w, h);
+      lines.forEach((l, i) => { ctx.fillStyle = l.c || "#ffffff"; ctx.fillText(l.t, x + w / 2, y + pad / 2 + lh * i + lh / 2); });
+    };
+
+    const ready = readyShorts().length;
+    const fresh = ideasBy("new").length;
+    tag([{ t: "Publishing Center" }, { t: ready ? `▶ ${ready} ready to publish` : "No Shorts waiting", c: ready ? "#55ff55" : "#aaaaaa" }], 7 * BS * k, 1.2 * BS * k);
+    tag([{ t: "Research Library" }, { t: fresh ? `★ ${fresh} new idea${fresh === 1 ? "" : "s"}` : "No new ideas", c: fresh ? "#55ffff" : "#aaaaaa" }], 23 * BS * k, 1.2 * BS * k);
+    tag([{ t: "Open plot", c: "#aaaaaa" }, { t: "for your next bot", c: "#aaaaaa" }], 6.5 * BS * k, 13.3 * BS * k);
+    tag([{ t: "Open plot", c: "#aaaaaa" }, { t: "for your next bot", c: "#aaaaaa" }], 23.5 * BS * k, 13.3 * BS * k);
+
+    for (const v of villagers) {
+      const lines = [{ t: v.name }];
+      if (v.mode === "working") lines.push({ t: shorten(botState(v.id).task, 30), c: "#55ff55" });
+      else if (v.mode === "asleep" && !v.moving) lines.push({ t: "Z z z", c: "#55ffff" });
+      tag(lines, v.x * k, (v.y - 25) * k);
+    }
+    // zzz bubbles
+    for (const p of particles) if (p.kind === "z") {
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = "#55ffff";
+      ctx.fillText("z", p.x * k, p.y * k);
+      ctx.globalAlpha = 1;
+    }
+  }
+  const shorten = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+
+  // ---------------------------------------------------------------------
+  //  Main loop
+  // ---------------------------------------------------------------------
+  let last = performance.now(), t0 = last;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    const night = nightAmount();
+    for (const v of villagers) updateVillager(v, dt, night);
+    updateParticles(dt);
+    render((now - t0) / 1000);
+    requestAnimationFrame(frame);
+  }
+
+  // Click a building or villager
+  function hitTest(e) {
+    const r = canvas.getBoundingClientRect();
+    const tx = (e.clientX - r.left) / r.width * W, ty = (e.clientY - r.top) / r.height * H;
+    for (const v of villagers) if (Math.abs(v.x - tx) < 7 && ty > v.y - 22 && ty < v.y + 2) return { villager: v };
+    for (const [key, p] of Object.entries(PLACES)) {
+      if (tx >= p.x * BS && tx < (p.x + p.w) * BS && ty >= p.y * BS - 8 && ty < (p.y + p.h) * BS) return { place: key };
+    }
+    return null;
+  }
+  canvas.addEventListener("click", (e) => {
+    const hit = hitTest(e);
+    if (!hit) return;
+    if (hit.villager) openVillager(hit.villager.id);
+    else if (hit.place === "studio") openStudio("ready");
+    else if (hit.place === "library") openLibrary("new");
+    else openPlot();
+  });
+  canvas.addEventListener("mousemove", (e) => { canvas.style.cursor = hitTest(e) ? "pointer" : "default"; });
+  canvas.addEventListener("keydown", (e) => { if (e.key === "Enter") openStudio("ready"); });
+
+  // ---------------------------------------------------------------------
+  //  Panels and dialogs
+  // ---------------------------------------------------------------------
+  const cache = {};
+  const setHTML = (el, html) => { if (cache[el.id] !== html) { cache[el.id] = html; el.innerHTML = html; } };
+
+  function scoreBadge(score) {
+    const s = clamp(Math.round(Number(score) || 0), 0, 100);
+    const cls = s >= 75 ? "" : s >= 50 ? "mid" : "low";
+    return `<div class="score ${cls}" title="Viral potential ${s}/100"><b>${s}</b><i style="--p:${s}%"></i></div>`;
+  }
+
+  function renderSide() {
+    const ready = readyShorts(), fresh = ideasBy("new"), pub = publishedShorts();
+    $("#n-ready").textContent = ready.length;
+    $("#n-ideas").textContent = fresh.length;
+    $("#n-pub").textContent = pub.length;
+    $("#ready-count").textContent = ready.length ? ready.length + " waiting" : "";
+    $("#ideas-count").textContent = fresh.length ? fresh.length + " new" : "";
+
+    const banner = $("#conn-banner");
+    if (store.conn === "offline") {
+      banner.hidden = false;
+      banner.textContent = "Open this page on claude.ai while signed in to see your Shorts and ideas.";
+    } else banner.hidden = true;
+
+    setHTML($("#ready-list"), ready.length ? ready.slice(0, 6).map((s) => `
+      <li><button class="tip row" type="button" data-open-short="${esc(s.id)}">
+        <div class="grow"><div class="t">${esc(s.title || "Untitled Short")}</div>
+        <div class="m">${[fmtDur(s.durationSec), ago(toMs(s.createdAt))].filter(Boolean).join(" · ")}</div></div>
+        <span class="pill">▶ Ready</span>
+      </button></li>`).join("") + (ready.length > 6 ? `<li class="empty">+ ${ready.length - 6} more in the Publishing Center</li>` : "")
+      : `<li class="empty">${store.conn === "connecting" ? "Loading…" : "<b>No Shorts waiting.</b> When Higgs finishes a Short, it lands here ready to post."}</li>`);
+
+    setHTML($("#ideas-list"), fresh.length ? fresh.slice(0, 5).map((i) => `
+      <li><button class="tip row" type="button" data-open-idea="${esc(i.id)}">
+        ${scoreBadge(i.score)}
+        <div class="grow"><div class="t">${esc(i.title || "Untitled idea")}</div>
+        <div class="m">${esc(i.format || "")}${i.format ? " · " : ""}${ago(toMs(i.createdAt))}</div></div>
+      </button></li>`).join("")
+      : `<li class="empty">${store.conn === "connecting" ? "Loading…" : "<b>No new ideas.</b> Sage posts viral Short ideas here after each research run."}</li>`);
+
+    $("#crew-count").textContent = villagers.length + " bots";
+    setHTML($("#crew-list"), villagers.map((v) => {
+      const st = botState(v.id);
+      const mode = st.working ? "working" : nightAmount() > 0.6 ? "asleep" : "idle";
+      const line = mode === "working" ? `<span class="status-working">Working: ${esc(st.task)}</span>`
+        : mode === "asleep" ? `<span class="status-asleep">Asleep</span>${st.updated ? ` · last report ${ago(st.updated)}` : ""}`
+        : `<span class="status-idle">Idle</span>${st.updated ? ` · last report ${ago(st.updated)}` : ""}`;
+      return `<li><button class="tip row" type="button" data-open-villager="${esc(v.id)}">
+        <img class="face" src="${v.portrait}" alt="">
+        <div class="grow"><div class="t">${esc(v.name)} <span style="color:var(--gray);font-size:13px">${esc(v.role)}</span></div>
+        <div class="m">${line}</div></div></button></li>`;
+    }).join(""));
+  }
+
+  // ----- dialog plumbing -----
+  const dlg = $("#dlg");
+  let current = null;   // { kind, tab, focus }
+  function showDialog() { if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); } }
+  function closeDialog() { current = null; if (dlg.open) dlg.close ? dlg.close() : dlg.removeAttribute("open"); }
+  dlg.addEventListener("close", () => { current = null; });
+  $("#dlg-close").addEventListener("click", closeDialog);
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) closeDialog(); });
+
+  function tabsHTML(tabs, active) {
+    return tabs.map(([k, label]) => `<button class="mc-btn small ${k === active ? "on" : ""}" type="button" data-tab="${k}" aria-pressed="${k === active}">${label}</button>`).join("");
+  }
+  function renderDialog() {
+    if (!current) return;
+    if (current.kind === "studio") renderStudio();
+    else if (current.kind === "library") renderLibrary();
+    else if (current.kind === "villager") renderVillager();
+  }
+
+  function shortCard(s) {
+    const url = safeUrl(s.videoUrl), thumb = safeUrl(s.thumbnailUrl);
+    const tags = Array.isArray(s.hashtags) ? s.hashtags.join(" ") : (s.hashtags || "");
+    const idea = s.ideaId && store.ideas.find((i) => i.id === s.ideaId);
+    const ready = (s.status || "ready") === "ready";
+    const meta = [fmtDur(s.durationSec), ready ? "made " + ago(toMs(s.createdAt)) : "published " + ago(toMs(s.publishedAt)), idea ? `from Sage's idea “${esc(idea.title)}”` : ""].filter(Boolean).join(" · ");
+    return `<article class="tip card" id="short-${esc(s.id)}">
+      <div class="thumb" ${thumb ? `style="background-image:url('${esc(thumb)}')"` : ""}>${thumb ? "" : `<img src="${ICONS.ready}" alt="">`}</div>
+      <div class="body">
+        <h3>${esc(s.title || "Untitled Short")}</h3>
+        <div class="meta">${meta}</div>
+        ${s.hook ? `<p class="hook">Hook: ${esc(s.hook)}</p>` : ""}
+        ${s.caption ? `<p class="caption">${esc(s.caption)}</p>` : ""}
+        ${tags ? `<div class="tags">${esc(tags)}</div>` : ""}
+        <div class="actions">
+          ${url ? `<a class="mc-btn small" href="${esc(url)}" target="_blank" rel="noopener">Open video</a>` : ""}
+          ${s.caption || tags ? `<button class="mc-btn small" type="button" data-copy="${esc(s.id)}">Copy caption</button>` : ""}
+          ${store.canWrite && store.db ? (ready
+            ? `<button class="mc-btn small green" type="button" data-publish="${esc(s.id)}">Mark published</button>`
+            : `<button class="mc-btn small" type="button" data-unpublish="${esc(s.id)}">Move back to ready</button>`) : ""}
+        </div>
+      </div>
+    </article>`;
+  }
+  function openStudio(tab, focus) { current = { kind: "studio", tab: tab || "ready", focus }; renderStudio(); showDialog(); }
+  function renderStudio() {
+    const ready = readyShorts(), pub = publishedShorts();
+    $("#dlg-title").textContent = "Publishing Center";
+    $("#dlg-sub").textContent = "Higgs's studio. Every Short he makes with Higgsfield waits here until you post it.";
+    setHTML($("#dlg-tabs"), tabsHTML([["ready", `Ready (${ready.length})`], ["published", `Published (${pub.length})`]], current.tab));
+    const list = current.tab === "ready" ? ready : pub;
+    setHTML($("#dlg-body"), list.length ? list.map(shortCard).join("")
+      : `<p class="empty">${current.tab === "ready" ? "<b>Nothing waiting to publish.</b> Ask Higgs to turn one of Sage's ideas into a Short, or add one yourself." : "<b>Nothing published yet.</b> Mark a Short as published after you post it to YouTube."}</p>`);
+    const foot = $("#dlg-foot");
+    foot.hidden = false;
+    setHTML(foot, `<button class="mc-btn green" type="button" data-add-short>+ Add a Short</button>`);
+    flashFocus();
+  }
+
+  function ideaCard(i) {
+    const st = i.status || "new";
+    const sources = Array.isArray(i.sources) ? i.sources.slice(0, 6).map((s) => {
+      const u = safeUrl(s && (s.url || s));
+      const label = (s && s.label) || (u ? u.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40) : "");
+      return u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(label)}</a>` : "";
+    }).join("") : "";
+    const actions = store.canWrite && store.db ? (st === "new"
+      ? `<button class="mc-btn small green" type="button" data-approve="${esc(i.id)}">Approve for Higgs</button><button class="mc-btn small" type="button" data-pass="${esc(i.id)}">Pass</button>`
+      : `<button class="mc-btn small" type="button" data-renew="${esc(i.id)}">Move back to new</button>`) : "";
+    return `<article class="tip card" id="idea-${esc(i.id)}">
+      ${scoreBadge(i.score)}
+      <div class="body">
+        <h3>${esc(i.title || "Untitled idea")}</h3>
+        <div class="meta">${[esc(i.format || ""), "found " + ago(toMs(i.createdAt)), st === "approved" ? "approved for Higgs" : st === "passed" ? "passed" : ""].filter(Boolean).join(" · ")}</div>
+        ${i.hook ? `<p class="hook">Hook: “${esc(i.hook)}”</p>` : ""}
+        ${i.why ? `<p class="why">${esc(i.why)}</p>` : ""}
+        ${sources ? `<div class="sources">${sources}</div>` : ""}
+        ${actions ? `<div class="actions">${actions}</div>` : ""}
+      </div>
+    </article>`;
+  }
+  function openLibrary(tab, focus) { current = { kind: "library", tab: tab || "new", focus }; renderLibrary(); showDialog(); }
+  function renderLibrary() {
+    const n = ideasBy("new"), a = ideasBy("approved"), p = ideasBy("passed");
+    $("#dlg-title").textContent = "Research Library";
+    $("#dlg-sub").textContent = "Sage's study. Short ideas ranked by how likely they are to go viral on your channel. Approve one and Higgs will make it.";
+    setHTML($("#dlg-tabs"), tabsHTML([["new", `New (${n.length})`], ["approved", `Approved (${a.length})`], ["passed", `Passed (${p.length})`]], current.tab));
+    const list = current.tab === "new" ? n : current.tab === "approved" ? a : p;
+    setHTML($("#dlg-body"), list.length ? list.map(ideaCard).join("")
+      : `<p class="empty">${current.tab === "new" ? "<b>No new ideas.</b> Ask Sage to research what Shorts are taking off right now." : "Nothing here yet."}</p>`);
+    $("#dlg-foot").hidden = true;
+    flashFocus();
+  }
+  function flashFocus() {
+    if (!current.focus) return;
+    const el = document.getElementById(current.focus);
+    current.focus = null;
+    if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1400); }
+  }
+
+  function openVillager(id) { current = { kind: "villager", id }; renderVillager(); showDialog(); }
+  function renderVillager() {
+    const v = villagers.find((x) => x.id === current.id);
+    const st = botState(v.id);
+    $("#dlg-title").textContent = v.name;
+    $("#dlg-sub").textContent = v.role;
+    setHTML($("#dlg-tabs"), "");
+    const home = v.home === "studio" ? "Publishing Center" : "Research Library";
+    const job = v.home === "studio"
+      ? "Turns approved ideas into Shorts with Higgsfield AI, then drops each finished Short in the Publishing Center with its title, caption and hashtags."
+      : "Researches which YouTube Shorts are taking off and what would serve your channel best, then posts ranked ideas to the Research Library.";
+    setHTML($("#dlg-body"), `<div class="tip card"><img src="${v.portrait}" alt="" style="width:64px;height:64px;image-rendering:pixelated;flex:none">
+      <div class="body">
+        <h3>${esc(v.name)} lives in the ${home}</h3>
+        <p>${job}</p>
+        <div class="meta">${v.mode === "working" ? `<span class="status-working">Working: ${esc(st.task)}</span>` : v.mode === "asleep" ? `<span class="status-asleep">Asleep for the night</span>` : `<span class="status-idle">Idle, wandering the village</span>`}${st.updated ? " · last report " + ago(st.updated) : " · hasn't reported in yet"}</div>
+      </div></div>`);
+    const foot = $("#dlg-foot");
+    foot.hidden = false;
+    setHTML(foot, `<button class="mc-btn" type="button" data-goto="${v.home}">Open the ${home}</button>`);
+  }
+  function openPlot() {
+    current = { kind: "plot" };
+    $("#dlg-title").textContent = "Open plot";
+    $("#dlg-sub").textContent = "Room for your next Claudebot.";
+    setHTML($("#dlg-tabs"), "");
+    setHTML($("#dlg-body"), `<div class="tip"><p style="margin:0">Tell Claude what your next bot should do, and it will build that bot a workshop on this plot, give it a villager, and add a panel for its work.</p></div>`);
+    $("#dlg-foot").hidden = true;
+    showDialog();
+  }
+  function openHelp() {
+    current = { kind: "help" };
+    $("#dlg-title").textContent = "How the village works";
+    $("#dlg-sub").textContent = "Your bots report here; you decide what gets posted.";
+    setHTML($("#dlg-tabs"), "");
+    setHTML($("#dlg-body"), `<div class="help">
+      <p><b>1. Sage researches.</b> Sage looks at which Shorts are taking off and posts ranked ideas to the Research Library, each with a hook and the reason it should work for your channel.</p>
+      <p><b>2. You pick.</b> Approve the ideas you like. Approved ideas go to Higgs.</p>
+      <p><b>3. Higgs makes the Short.</b> Higgs builds it with Higgsfield AI and drops the finished Short in the Publishing Center with a caption and hashtags.</p>
+      <p><b>4. You publish.</b> Open the video, copy the caption, post it, then press <b>Mark published</b>.</p>
+      <div class="tip"><p>To put a bot to work, ask Claude in any chat, for example: <code>Sage, research 5 viral Shorts ideas for my channel and post them to Claudebot Village.</code></p></div>
+      <p style="margin-top:10px">While a bot works it walks to its building and its task shows above its head. The village follows your local time, so your villagers go to bed at night.</p>
+    </div>`);
+    $("#dlg-foot").hidden = true;
+    showDialog();
+  }
+
+  // ----- writes -----
+  async function write(btn, fn, okMsg) {
+    if (!store.db) return;
+    if (btn) btn.disabled = true;
+    try {
+      await fn();
+      if (okMsg) toast(okMsg.title, okMsg.text, okMsg.icon);
+      return true;
+    } catch (e) {
+      if (e && e.code === "invalid_argument") { store.canWrite = false; toast("Can't save", "You can view this village but not change it.", "ready"); renderDialog(); }
+      else toast("Couldn't save", "Check your connection and try again.", "ready");
+      if (btn) btn.disabled = false;
+      return false;
+    }
+  }
+  async function copyCaption(id, btn) {
+    const s = store.shorts.find((x) => x.id === id);
+    if (!s) return;
+    const tags = Array.isArray(s.hashtags) ? s.hashtags.join(" ") : (s.hashtags || "");
+    const text = [s.caption || "", tags].filter(Boolean).join("\n\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = "Copy caption"; }, 1500);
+    } catch {
+      const cap = document.querySelector(`#short-${CSS.escape(id)} .caption`);
+      if (cap) { const r = document.createRange(); r.selectNodeContents(cap); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      btn.textContent = "Press Ctrl+C";
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button, a");
+    if (!t) return;
+    const d = t.dataset;
+    if (d.tab && current) { current.tab = d.tab; renderDialog(); }
+    else if (d.openShort) openStudio("ready", "short-" + d.openShort);
+    else if (d.openIdea) openLibrary("new", "idea-" + d.openIdea);
+    else if (d.openVillager) openVillager(d.openVillager);
+    else if (d.goto) (d.goto === "studio" ? openStudio("ready") : openLibrary("new"));
+    else if (d.addShort !== undefined) openAdd();
+    else if (d.copy) copyCaption(d.copy, t);
+    else if (d.publish) write(t, () => store.db.collection("shorts").doc(d.publish).update({ status: "published", publishedAt: Date.now() }), { title: "Published!", text: "Nice work. Moved to your published list.", icon: "pub" });
+    else if (d.unpublish) write(t, () => store.db.collection("shorts").doc(d.unpublish).update({ status: "ready", publishedAt: null }));
+    else if (d.approve) write(t, () => store.db.collection("ideas").doc(d.approve).update({ status: "approved", decidedAt: Date.now() }), { title: "Sent to Higgs", text: "Higgs will turn it into a Short.", icon: "ideas" });
+    else if (d.pass) write(t, () => store.db.collection("ideas").doc(d.pass).update({ status: "passed", decidedAt: Date.now() }));
+    else if (d.renew) write(t, () => store.db.collection("ideas").doc(d.renew).update({ status: "new", decidedAt: null }));
+  });
+  $("#stat-ready").addEventListener("click", () => openStudio("ready"));
+  $("#stat-ideas").addEventListener("click", () => openLibrary("new"));
+  $("#stat-pub").addEventListener("click", () => openStudio("published"));
+  $("#open-studio").addEventListener("click", () => openStudio("ready"));
+  $("#open-library").addEventListener("click", () => openLibrary("new"));
+  $("#btn-help").addEventListener("click", openHelp);
+  $("#btn-add").addEventListener("click", () => openAdd());
+
+  // ----- add a Short by hand -----
+  const addDlg = $("#dlg-add");
+  function openAdd() {
+    if (!store.db || !store.canWrite) { toast("Not connected", "Open this page on claude.ai while signed in to add Shorts.", "ready"); return; }
+    if (dlg.open) closeDialog();
+    addDlg.showModal ? addDlg.showModal() : addDlg.setAttribute("open", "");
+    $("#f-title").focus();
+  }
+  $("#add-cancel").addEventListener("click", () => addDlg.close());
+  $("#add-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("#f-title").value.trim();
+    if (!title) return;
+    const url = $("#f-url").value.trim();
+    if (url && !safeUrl(url)) { $("#f-url").setCustomValidity("Use a link that starts with https://"); $("#f-url").reportValidity(); return; }
+    const tags = $("#f-tags").value.trim().split(/[\s,]+/).filter(Boolean).map((t) => (t.startsWith("#") ? t : "#" + t));
+    const data = { title, videoUrl: url || null, caption: $("#f-caption").value.trim(), hashtags: tags, durationSec: Number($("#f-dur").value) || null, status: "ready", createdAt: Date.now(), source: "manual" };
+    const ok = await write($("#add-save"), () => store.db.collection("shorts").add(data), { title: "Short added", text: title, icon: "ready" });
+    $("#add-save").disabled = false;
+    if (!ok) return;
+    $("#add-form").reset();
+    addDlg.close();
+  });
+  $("#f-url").addEventListener("input", () => $("#f-url").setCustomValidity(""));
+
+  // ----- toasts (Minecraft advancement style) -----
+  function toast(title, text, iconKey) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<img src="${ICONS[iconKey] || ICONS.ready}" alt=""><div style="min-width:0"><b></b><span></span></div>`;
+    el.querySelector("b").textContent = title;
+    el.querySelector("span").textContent = text;
+    $("#toasts").appendChild(el);
+    setTimeout(() => el.classList.add("out"), 4200);
+    setTimeout(() => el.remove(), 4700);
+  }
+
+  // ---------------------------------------------------------------------
+  //  Connect to the database
+  // ---------------------------------------------------------------------
+  function docs(snap) { return snap.docs.map((d) => ({ id: d.id, ...d.data() })); }
+  async function connect() {
+    const use = window.claude && window.claude.use;
+    const db = use ? await window.claude.use("db").catch(() => null) : null;
+    if (!db) { store.conn = "offline"; renderSide(); return; }
+    store.db = db;
+    const user = await window.claude.use("user").catch(() => null);
+    if (user) { const c = await user.can("data.write"); if (c === false) store.canWrite = false; }
+    let seenShorts = false, seenIdeas = false;
+    const startedAt = Date.now();
+    const settled = (snap) => !snap.metadata.fromCache && Date.now() - startedAt > 4000;
+    const fail = () => { store.conn = "offline"; renderSide(); };
+    db.collection("shorts").onSnapshot((snap) => {
+      store.conn = "live";
+      if (seenShorts && settled(snap)) {
+        for (const ch of snap.docChanges()) {
+          const s = ch.doc.data() || {};
+          if (ch.type === "added" && (s.status || "ready") === "ready") {
+            toast("New Short ready!", s.title || "Untitled Short", "ready");
+            happyBurst(120, 140, 14);
+            const h = villagers.find((v) => v.id === "higgs"); if (h) h.hop = 0.6;
+          }
+        }
+      }
+      seenShorts = true;
+      store.shorts = docs(snap);
+      renderSide(); renderDialog();
+    }, fail);
+    db.collection("ideas").onSnapshot((snap) => {
+      store.conn = "live";
+      if (seenIdeas && settled(snap)) {
+        const added = snap.docChanges().filter((ch) => ch.type === "added" && ((ch.doc.data() || {}).status || "new") === "new");
+        if (added.length) {
+          toast(added.length === 1 ? "Sage found an idea" : `Sage found ${added.length} ideas`, (added[0].doc.data() || {}).title || "", "ideas");
+          happyBurst(360, 140, 10, "#7fd3ff");
+          const s = villagers.find((v) => v.id === "sage"); if (s) s.hop = 0.6;
+        }
+      }
+      seenIdeas = true;
+      store.ideas = docs(snap);
+      renderSide(); renderDialog();
+    }, fail);
+    db.collection("bots").onSnapshot((snap) => {
+      store.bots = Object.fromEntries(docs(snap).map((d) => [d.id, d]));
+      renderSide(); renderDialog();
+    }, () => {});
+  }
+
+  // ---------------------------------------------------------------------
+  //  Clock + boot
+  // ---------------------------------------------------------------------
+  function tickClock() {
+    const d = new Date();
+    const n = nightAmount();
+    $("#clock").textContent = `${n > 0.5 ? "☾" : "☀"} ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  }
+  buildBackground();
+  if (document.fonts && document.fonts.load) document.fonts.load('500 16px "Pixelify Sans"').catch(() => {});
+  resize();
+  window.addEventListener("resize", resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas.parentElement);
+  tickClock();
+  setInterval(() => { tickClock(); renderSide(); }, 30000);
+  renderSide();
+  connect().catch(() => { store.conn = "offline"; renderSide(); });
+  requestAnimationFrame(frame);
+})();
+</script>
